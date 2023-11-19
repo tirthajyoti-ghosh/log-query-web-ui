@@ -71,7 +71,7 @@ const App: React.FC = () => {
             endDate = dayjs(formValues.dateRange[1]).format();
         }
 
-        const { data } = await axios.post(`${process.env.API_URL}/.netlify/functions/query`, {
+        const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/.netlify/functions/query`, {
             filters: formattedFilters,
             startDate,
             endDate,
