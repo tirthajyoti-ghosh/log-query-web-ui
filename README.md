@@ -1,46 +1,83 @@
-# Getting Started with Create React App
+### Project presentation
+https://youtu.be/K9GL8jj7N9k
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+### The project is divided into 4 parts
 
-## Available Scripts
+- Part 1: Serverless functions for log ingestion and querying. Chosen serverless functions because of the low cost of running them and the ease of scaling them. 
+- Part 2: Database layer for caching connections to mitigate exhaustion of database connections. Chosen because each invocation of the serverless function will create a new connection to the database.
+- Part 3: Queueing system for asynchronous processing of data. Chosen to enable bulk processing of data and to prevent the serverless function from timing out.
+- Part 4: Web UI for querying logs. Chosen to enable users to query logs without having to write code.
 
-In the project directory, you can run:
+The serverless functions are front-facing - they intercept http requests both for ingestion and querying.
+The database layer and queueing system are internal - they are not exposed to the user.
 
-### `npm start`
+### Architecture
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Ingestion request (from various sources) ---> Serverless function ---> Queueing system ---> Database layer ---> Database. \
+Querying request (from web ui) ---> Serverless function ---> Database layer ---> Database ---> Database layer ---> Serverless function ---> Web ui.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Features implemented:
 
-### `npm test`
+- bulk processing as well as single processing
+- query by specific date range
+- query by any one or all field
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  - level
+  - message
+  - resourceId
+  - timestamp
+  - traceId
+  - spanId
+  - commit
+  - metadata.parentResourceId
+- advanced search by any combination of fields and applying condition on each field (equal, not equal, contains, not contains)
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Node.js latest
+- npm latest
+- mongodb running locally
+- zeplo cli installed globally: `npm install -g @zeplo/cli`
+- netlify cli installed globally: `npm install -g netlify-cli`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Running locally
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- in a different terminal run `zeplo dev` to start the queueing system
+- in a different terminal `cd` into `db` folder and run `npm install` to install dependencies
+- run `npm run build && DEV=true SECRET_KEY=secret SERVER_PORT=8000 npm run start` to start the database layer
+- in a different terminal cd into `logs` folder and run `npm install` to install dependencies
+- run `netlify dev -p 3000` to start the serverless functions
+- in a different terminal cd into `web-ui` folder and run `npm install` to install dependencies
+- run `PORT=3001 REACT_APP_API_URL=http://localhost:3000 npm start` to start the web ui.
 
-### `npm run eject`
+### Comments
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+While a proper cloud provider such as AWS or GCP would be ideal for this project, I chose:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- Netlify for serverless functions
+- Zeplo for queueing system
+- MongoDB Atlas for database layer
+- Netlify for web ui
+- Cyclic.sh for database layer
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+for the following reasons:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- ease of setup
+- ease of deployment
+- free tier
 
-## Learn More
+Setting up a proper cloud environment with best security practices would take a lot of time and effort. I chose to focus on the core functionality of the project instead. Although the queueing system and database layer is open to the internet, I have made sure that only the serverless functions have access to them. In a proper cloud environment, I would have used a VPC to restrict access to the queueing system and database layer.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+You can track the progress of the project here:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Serverless functions: https://github.com/tirthajyoti-ghosh/log-ingestor-service/commits/main
+- Database layer: https://github.com/tirthajyoti-ghosh/log-ingestor-db-layer/commits/main
+- Web UI: https://github.com/tirthajyoti-ghosh/log-query-web-ui/commits/main
+
+### Potentials improvements
+
+- Using serverless functions means cold start time. A warmup function can be used to mitigate this.
+- A proper log parser is absent from this implementation. 
+- Having a proper log parser would enable us to determine which fields should be indexed in the database with confidence which is also absent from this implementation.
+- A proper cloud environment with best security practices.
+- A better search capability. Elasticsearch would be a good choice.
